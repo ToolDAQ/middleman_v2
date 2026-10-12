@@ -169,7 +169,7 @@ bool MulticastReceiverSender::Initialise(std::string configfile, DataModel &data
 		if(ifa->ifa_addr == nullptr) continue; // ignore in case no IP address; e.g. if interface down/unconfigured
 		
 		int family = ifa->ifa_addr->sa_family;
-		if(family!=AF_INET && family!=AF_INET6) continue; // ignore AP_PACKET/AF_PACKET interfaces
+		if(family!=AF_INET) continue; // ip_mreq is IPv4-only; treating an AF_INET6 sockaddr as sockaddr_in reads garbage bytes
 		
 		// only continue for the first address for an interface, since calling it multiple times gives 'address already in use'
 		if(ifnames.count(ifa->ifa_name)) continue;
