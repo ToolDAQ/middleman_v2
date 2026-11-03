@@ -382,11 +382,36 @@ UPDATE device_config SET retired = TRUE WHERE device=p_device_name AND version<p
 SELECT TRUE \
 \$function$"
 
+echo "Create SilenceAlarm function"
+psql -ddaq -c " CREATE OR REPLACE FUNCTION public.SilenceAlarm( p_uid INTEGER, p_user TEXT ) RETURNS TABLE(uid INTEGER, status INTEGER, silence_user TEXT) LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$
+    UPDATE public.alarms AS a SET status = 1, silence_user_id = public.UseridFromUsername(p_user) WHERE a.uid = p_uid RETURNING a.uid, a.status, a.silence_user;
+\$function$"
+
+echo "Create ResolveAlarm function"
+psql -ddaq -c "CREATE OR REPLACE FUNCTION public.ResolveAlarm(
+    p_uid INTEGER,
+    p_resolution_user TEXT,
+    p_expert_user TEXT,
+    p_resolution_description TEXT
+)
+RETURNS TABLE(uid INTEGER, status INTEGER)
+LANGUAGE sql SECURITY DEFINER SET search_path TO 'public'
+AS \$function$
+    UPDATE public.alarms AS a
+    SET status = 2,
+        resolve_user_id = public.UseridFromUsername(p_resolution_user),
+        resolve_time = NOW(),
+        resolution_description = p_resolution_description,
+        expert_user_id = public.UseridFromUsername(p_expert_user)
+    WHERE a.uid = p_uid
+    RETURNING a.uid, a.status;
+\$function$"
+
 # add a database role for the webserver
 echo "adding webserver database role"
 psql -ddaq -c "CREATE ROLE webserver LOGIN"
 psql -ddaq -c "GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA public TO webserver;"
-psql -ddaq -c "GRANT UPDATE ON alarms, devices TO webserver;"
+
 psql -ddaq -c "GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON ALL ROUTINES IN SCHEMA public TO webserver;"
 psql -ddaq -c "GRANT CONNECT, TEMPORARY ON DATABASE daq TO webserver;"
@@ -400,7 +425,8 @@ psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.CheckUserExists(text, text) TO w
 psql -ddaq -c 'GRANT EXECUTE ON FUNCTION public.UsernameFromUserId(integer) TO webserver;'
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.UserIdFromUsername(text) TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireAllBaseConfigurations() TO webserver;"
-
+psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.ResolveAlarm() TO webserver;"
+psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.SilenceAlarm() TO webserver;"
 # DEFAULT DATA
 ###############
 # Insert a default user for testing
