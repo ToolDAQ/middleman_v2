@@ -492,7 +492,7 @@ psql -ddaq -c "REVOKE CREATE ON SCHEMA public FROM middleman;"
 psql -ddaq -c "REVOKE CREATE ON DATABASE daq FROM middleman;"
 # transaction timeout limits so people can't lock the middleman
 psql -ddaq -c "ALTER ROLE middleman SET statement_timeout = 1000;"
-psql -ddaq -c "ALTER ROLE middleman SET idle_in_transaction_timeout = 5000;"
+psql -ddaq -c "ALTER ROLE middleman SET idle_in_transaction_session_timeout = 5000;"
 psql -ddaq -c "ALTER ROLE middleman SET transaction_timeout = 10000;"
 psql -ddaq -c "ALTER ROLE middleman SET lock_timeout = 10000;"
 # may be overriden with `psql -c "set statement_timeout = '30s';"` within a given session
