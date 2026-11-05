@@ -46,6 +46,7 @@ if [ -f /.DBSetupDone ]; then
 	fi
 	
 	# run scripts to pre-populate
+	cd $( dirname "${BASH_SOURCE[0]}" )
 	find ./scripts -type f -name '*.sh' -exec sh -c "if [ ! -f {}.done ]; then {} && touch {}.done; fi" \;
 	
 	exit 0;
@@ -501,5 +502,6 @@ touch /.DBSetupDone
 
 # run scripts to pre-populate
 cd $( dirname "${BASH_SOURCE[0]}" )
+echo ${PWD}
 find ./scripts -type f -name '*.sh' -exec sh -c "if [ ! -f {}.done ]; then {} && touch {}.done; fi" \;
 
