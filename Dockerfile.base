@@ -15,7 +15,7 @@ RUN yum install -y       \
 
 # rocky9 doesn't have sufficiently new postgres for current pg_partman
 # and we probably want a new one anyway
-RUN dnf --enablerepo=crb install -y \
+RUN dnf update -y && dnf --enablerepo=crb install -y \
     perl-IPC-Run          \
     redhat-rpm-config     \
     https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm \
