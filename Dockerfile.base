@@ -47,10 +47,8 @@ RUN cd /opt \
 # FIXME remove pg-18 specialisation
 RUN cd /opt \
     && export PKG_CONFIG_PATH=/usr/pgsql-18/lib/pkgconfig && export PATH+=:/usr/pgsql-18/bin \
-    && wget https://github.com/pgpartman/pg_partman/archive/refs/tags/v5.4.3.tar.gz \
-    && tar -zxf v5.4.3.tar.gz \
-    && rm v5.4.3.tar.gz \
-    && cd pg_partman-5.4.3 \
+    && git clone https://github.com/ToolDAQ/pg_partman.git \
+    && cd pg_partman \
     && make install
 
 # FIXME checkout a tag

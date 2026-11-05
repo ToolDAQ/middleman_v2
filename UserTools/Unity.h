@@ -17,3 +17,4 @@
 #include "StopQuitFile.h"
 #include "GracefulStop.h"
 #include "SetVerbosity.h"
+#include "CrashCheck.h"

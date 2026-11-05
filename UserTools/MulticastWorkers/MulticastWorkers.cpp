@@ -278,7 +278,7 @@ bool MulticastWorkers::MulticastMessageJob(void*& arg){
 		}
 		
 		// FIXME can we make this use moving write-head instead of copying?
-		if(m_args->out_buffer->length()>1) (*m_args->out_buffer) += ", ";
+		if(m_args->out_buffer->length()>1) (*m_args->out_buffer) += ",";
 		(*m_args->out_buffer) += m_args->the_msg;
 		//printf("%s added message '%.*s'\n",m_args->m_job_name.c_str(), m_args->the_msg.length(), m_args->the_msg.data());
 		
@@ -322,8 +322,8 @@ bool MulticastWorkers::MulticastMessageJob(void*& arg){
 	m_args->monitoring_vars->msgs_processed += m_args->msg_buffer->size();
 	m_args->monitoring_vars->logs_processed += m_args->n_log_msgs;
 	m_args->monitoring_vars->mons_processed += m_args->n_mon_msgs;
-	m_args->monitoring_vars->logging_bytes_processed += m_args->logging_buffer->length() - 2 - m_args->n_log_msgs;
-	m_args->monitoring_vars->monitoring_bytes_processed += m_args->monitoring_buffer->length() - 2 - m_args->n_mon_msgs;
+	if(m_args->n_log_msgs!=0) m_args->monitoring_vars->logging_bytes_processed += m_args->logging_buffer->length() - 1 - m_args->n_log_msgs; // subtractions account for [ , ] i think
+	if(m_args->n_mon_msgs!=0) m_args->monitoring_vars->monitoring_bytes_processed += m_args->monitoring_buffer->length() - 1 - m_args->n_mon_msgs;
 	
 	
 	m_args->m_pool->Add(m_args);  // return our job args to the job args struct pool

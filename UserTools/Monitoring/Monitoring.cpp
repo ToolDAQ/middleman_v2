@@ -11,6 +11,9 @@ bool Monitoring::Initialise(std::string configfile, DataModel &data){
 	logger = m_data->logger;
 	//m_variables.Print();
 	
+	time_t rawtime = time(nullptr);
+	LOG(logger,LOG_ERR,"Middleman starting at %s",ctime(&rawtime));
+	
 	if(!m_variables.Get("verbose",m_verbose)) m_verbose=1;
 	
 	// how often to write out monitoring stats
@@ -82,6 +85,10 @@ bool Monitoring::Finalise(){
 	m_data->num_threads--;
 	
 	LOG(logger,LOG_NOTICE,"%s Finished",m_tool_name.c_str());
+	
+	time_t rawtime = time(nullptr);
+	LOG(logger,LOG_ERR,"Middleman stopping at %s",ctime(&rawtime));
+	
 	return true;
 }
 

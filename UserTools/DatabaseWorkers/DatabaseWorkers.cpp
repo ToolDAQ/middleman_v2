@@ -332,7 +332,7 @@ void DatabaseWorkers::DatabaseJobFail(void*& arg){
 	//query.err = ??? but what was the problem?
 	
 	DatabaseJobStruct* m_args=static_cast<DatabaseJobStruct*>(arg);
-	std::cerr<<m_args->m_job_name<<" failure"<<std::endl;
+	LOG(m_args->m_data->logger,LOG_ERR,"%s job failure",m_args->m_job_name.c_str());
 	++(m_args->monitoring_vars->jobs_failed);
 	
 	if(!m_args->logging_queue.empty() || !m_args->monitoring_queue.empty()){
@@ -416,17 +416,6 @@ std::string DatabaseWorkers::CacheConfigs(const char* payload){
 		                    "FROM expanded f JOIN device_config dc ON f.device=dc.device AND (f.version)::int=dc.version";
 		//printf("caching configs with query '%s', base_id %d, runmode_id %d\n",query.c_str(), new_base_config_id, new_runmode_config_id);
 		
-		/*
-		// to accommodate James' base/runmode config entry format:
-		// [{"device":"mydev", "version":X}, {"device":"mydev2", "version":Y} ...]
-		// N.B this doesn't work: || with JSON arrays appends them, so runmode entries don't override base ones.
-		std::string query = "WITH base AS ( SELECT data FROM base_config WHERE config_id=$1), "
-		                    "  runmode AS ( SELECT data FROM runmode_config WHERE config_id=$2), "
-		                    "   merged AS ( SELECT base.data || runmode.data AS data FROM base CROSS JOIN runmode), "
-		                    " expanded AS ( SELECT d->>'device' AS device, d->>'version' AS version from merged CROSS JOIN jsonb_array_elements(merged.data) as d ) "
-		                    "SELECT f.device, json_build_object('version', f.version, 'data', dc.data, 'base_config_id', $1, 'runmode_config_id', $2 ) FROM expanded f JOIN device_config dc ON f.device=dc.device AND (f.version)::int=dc.version";
-		*/
-		
 		for(auto [ device, json ] : tx.query<std::string_view, std::string_view>(query, pqxx::params(new_base_config_id, new_runmode_config_id))){
 			//printf("cacheing device '%s', config '%s'\n",std::string(device).c_str(),std::string(json).c_str());
 			cached_configs[std::string{device}]=json;
@@ -474,9 +463,9 @@ bool DatabaseWorkers::DatabaseJob(void*& arg){
 		} else {
 			// set up prepared statements. These are, sadly, a property of the connection
 			// logging insert
-			conn->prepare("logging_insert", "INSERT INTO logging ( time, device, severity, message ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, device text, severity int, message text)");
+			conn->prepare("logging_insert", "INSERT INTO logging ( time, device_id, severity, message ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, device_id integer, severity int, message text)");
 			// monitoring insert
-			conn->prepare("monitoring_insert", "INSERT INTO monitoring ( time, device, subject, data ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, device text, subject text, data json)");
+			conn->prepare("monitoring_insert", "INSERT INTO monitoring ( time, device_id, subject, data ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, device_id integer, subject text, data json)");
 			// alarms insert
 			// N.B. a trigger is attached to inserts that will instead update an existing alarm if an unresolved one with the same name and message exists
 			conn->prepare("alarms_insert", "INSERT INTO alarms ( first_time, device, critical, description ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, device text, critical boolean, description text)");
@@ -487,11 +476,11 @@ bool DatabaseWorkers::DatabaseJob(void*& arg){
 			// calibration insert
 			conn->prepare("calibration_insert", "INSERT INTO calibration ( time, name, description, data ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, name text, description text, data json) returning version");
 			// device config insert
-			conn->prepare("device_config_insert", "INSERT INTO device_config ( time, device, author, description, data ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, device text, author text, description text, data json) returning version");
+			conn->prepare("device_config_insert", "INSERT INTO device_config ( time, device, author, description, data ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, device text, author integer, description text, data json) returning version");
 			// run config insert
-			conn->prepare("base_config_insert", "INSERT INTO base_config ( time, name, author, description, data ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, name text, author text, description text, data json) returning config_id");
+			conn->prepare("base_config_insert", "INSERT INTO base_config ( time, name, author, description, data ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, name text, author integer, description text, data json) returning config_id");
 			// run mode config insert
-			conn->prepare("runmode_config_insert", "INSERT INTO runmode_config ( time, name, author, description, data ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, name text, author text, description text, data json) returning config_id");
+			conn->prepare("runmode_config_insert", "INSERT INTO runmode_config ( time, name, author, description, data ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, name text, author integer, description text, data json) returning config_id");
 		}
 	}
 	
