@@ -196,7 +196,7 @@ psql -ddaq -c "CREATE UNIQUE INDEX user_name_idx ON users(LOWER(username));"
 
 echo "creating base_config table"
 # add more fields: retired by, on, reason?
-psql -ddaq -c "CREATE TABLE base_config (config_id integer GENERATED ALWAYS AS IDENTIY PRIMARY KEY, time timestamp with time zone NOT NULL DEFAULT now(), name text NOT NULL, version int NOT NULL, description text NOT NULL, author int NOT NULL references users(user_id), retired boolean NOT NULL DEFAULT FALSE, data jsonb NOT NULL);"
+psql -ddaq -c "CREATE TABLE base_config (config_id integer GENERATED ALWAYS AS IDENTIY PRIMARY KEY, time timestamp with time zone NOT NULL DEFAULT now(), name text NOT NULL, version int NOT NULL, description text NOT NULL, author_id integer NOT NULL references users(user_id), retired boolean NOT NULL DEFAULT FALSE, data jsonb NOT NULL);"
 
  # n.b. this index is doing double duty of enforcing unique {device:version} constraint and providing an ordered index
  # a unique(name,version) constraint uses an index to accomplish this under the hood, by doing it explicitly we can make the index ordered
@@ -209,7 +209,7 @@ psql -ddaq -c 'CREATE TRIGGER trig_base_config_ver BEFORE insert ON base_config 
 
 echo "creating runmode_config table"
 # add more fields: retired by, on, reason?
-psql -ddaq -c "CREATE TABLE runmode_config (config_id integer GENERATED ALWAYS AS IDENTIY PRIMARY KEY, time timestamp with time zone NOT NULL DEFAULT now(), name text NOT NULL, version int NOT NULL, description text NOT NULL, author int NOT NULL references users(user_id), retired boolean NOT NULL DEFAULT FALSE, data jsonb NOT NULL);"
+psql -ddaq -c "CREATE TABLE runmode_config (config_id integer GENERATED ALWAYS AS IDENTIY PRIMARY KEY, time timestamp with time zone NOT NULL DEFAULT now(), name text NOT NULL, version int NOT NULL, description text NOT NULL, author_id INTEGER NOT NULL references users(user_id), retired boolean NOT NULL DEFAULT FALSE, data jsonb NOT NULL);"
 
 echo "creating index on runmode_config table"
 psql -ddaq -c "CREATE UNIQUE INDEX ON runmode_config (name, version DESC NULLS LAST)"
@@ -232,7 +232,7 @@ psql -ddaq -c "CREATE UNIQUE INDEX dev_name_idx ON devices(LOWER(name));"
 echo "creating device_config table"
 # XXX IMPORTANT: VERSION 0 OF ALL DEVICE CONFIGURATIONS SHOULD BE DEVICE OFF
 # references device by name not id... better with our config retrieval method as we get requests by name
-psql -ddaq -c "CREATE TABLE device_config (id integer GENERATED ALWAYS AS IDENTIY PRIMARY KEY, time timestamp with time zone NOT NULL DEFAULT now(), device text references devices(name), version int NOT NULL, author int NOT NULL references users(user_id), description text NOT NULL, data json NOT NULL, retired_time TIMESTAMP WITH TIME ZONE DEFAULT NULL, retired_user_id INTEGER references users(user_id) DEFAULT NULL, retired BOOLEAN NOT NULL DEFAULT FALSE);"
+psql -ddaq -c "CREATE TABLE device_config (id integer GENERATED ALWAYS AS IDENTIY PRIMARY KEY, time timestamp with time zone NOT NULL DEFAULT now(), device text references devices(name), version int NOT NULL, author_id INTEGER NOT NULL references users(user_id), description text NOT NULL, data json NOT NULL, retired_time TIMESTAMP WITH TIME ZONE DEFAULT NULL, retired_user_id INTEGER references users(user_id) DEFAULT NULL, retired BOOLEAN NOT NULL DEFAULT FALSE);"
 
 echo "creating index on device_config table"
 psql -ddaq -c "CREATE UNIQUE INDEX ON device_config (device, version DESC NULLS LAST)"
@@ -304,7 +304,7 @@ psql -ddaq -c "UPDATE partman.part_config SET retention = '1 day', retention_sch
 echo "creating alarms table"
 # FIXME ideally uid would be unique, but requires being part of partitioning column, so we apply to the template
 # still use device name and do not enforce constraint
-psql -ddaq -c "CREATE TABLE alarms ( uid integer GENERATED ALWAYS AS IDENTIY NOT NULL, status INTEGER DEFAULT 0, critical BOOLEAN NOT NULL, first_time TIMESTAMP WITH TIME ZONE NOT NULL, last_time TIMESTAMP WITH TIME ZONE NOT NULL, device TEXT NOT NULL, description TEXT NOT NULL, silence_user TEXT, resolve_user TEXT, expert_user TEXT, resolve_time TIMESTAMP WITH TIME ZONE, resolution_description TEXT, event_counter INTEGER default 1 ) PARTITION BY RANGE (first_time);"
+psql -ddaq -c "CREATE TABLE alarms ( uid integer GENERATED ALWAYS AS IDENTIY NOT NULL, status INTEGER DEFAULT 0, critical BOOLEAN NOT NULL, first_time TIMESTAMP WITH TIME ZONE NOT NULL, last_time TIMESTAMP WITH TIME ZONE NOT NULL, device TEXT NOT NULL, description TEXT NOT NULL, silence_user_id INTEGER references users(user_id) DEFAULT NULL, resolve_user_id INTEGER references users(user_id) DEFAULT NULL, expert_user_id INTEGER references users(user_id) DEFAULT NULL, resolve_time TIMESTAMP WITH TIME ZONE DEFAULT NULL, resolution_description TEXT DEFAULT NULL, event_counter INTEGER default 1 ) PARTITION BY RANGE (first_time);"
 
 echo "creating indices on alarms table"
 # uid is used in updates by webpage
@@ -406,7 +406,7 @@ echo "creating function to validate username/password"
 psql -ddaq -c "CREATE OR REPLACE FUNCTION public.ValidateUser(p_username text, p_password_hash text) RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$ SELECT COALESCE((SELECT u.password_hash = p_password_hash FROM public.users u WHERE u.username = p_username), FALSE ); \$function$"
 
 echo "Create UseridFromUsername function"
-psql -ddaq -c "CREATE OR REPLACE FUNCTION public.UserIdFromUsername(p_username TEXT) RETURNS INTEGER LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$ SELECT user_id FROM public.users WHERE username = p_username;\$function$"
+psql -ddaq -c "CREATE OR REPLACE FUNCTION public.UserIdFromUsername(p_username TEXT) RETURNS INTEGER LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public' AS \$function$ SELECT user_id FROM public.users WHERE username = p_username;\$function$"
 
 echo "Create UsernameFromUserId function"
 psql -ddaq -c "CREATE OR REPLACE FUNCTION public.UsernameFromUserId(p_user_id INTEGER ) RETURNS TEXT LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public' AS \$function$ SELECT username FROM public.users WHERE user_id = p_user_id;\$function$"
@@ -430,13 +430,35 @@ UPDATE device_config SET retired = TRUE WHERE device=p_device_name AND version<p
 SELECT TRUE \
 \$function$"
 
+echo "Create SilenceAlarm function"
+psql -ddaq -c " CREATE OR REPLACE FUNCTION public.SilenceAlarm( p_uid INTEGER, p_user TEXT ) RETURNS TABLE(uid INTEGER, status INTEGER, silence_user TEXT) LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$
+    UPDATE public.alarms AS a SET status = 1, silence_user_id = public.UseridFromUsername(p_user) WHERE a.uid = p_uid RETURNING a.uid, a.status, a.silence_user;
+\$function$"
+
+echo "Create ResolveAlarm function"
+psql -ddaq -c "CREATE OR REPLACE FUNCTION public.ResolveAlarm(
+    p_uid INTEGER,
+    p_resolution_user TEXT,
+    p_expert_user TEXT,
+    p_resolution_description TEXT
+)
+RETURNS TABLE(uid INTEGER, status INTEGER)
+LANGUAGE sql SECURITY DEFINER SET search_path TO 'public'
+AS \$function$
+    UPDATE public.alarms AS a
+    SET status = 2,
+        resolve_user_id = public.UseridFromUsername(p_resolution_user),
+        resolve_time = NOW(),
+        resolution_description = p_resolution_description,
+        expert_user_id = public.UseridFromUsername(p_expert_user)
+    WHERE a.uid = p_uid
+    RETURNING a.uid, a.status;
+\$function$"
+
 # add a database role for the webserver
 echo "adding webserver database role"
 psql -ddaq -c "CREATE ROLE webserver LOGIN"
 psql -ddaq -c "GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA public TO webserver;"
-# FIXME UPDATE permissions aren't needed if the updates are embedded in a function call
-# we should do this so we can control what they can update (e.g. only set retired flag)
-psql -ddaq -c "GRANT UPDATE ON alarms, devices TO webserver;"
 psql -ddaq -c "GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON ALL ROUTINES IN SCHEMA public TO webserver;"
 psql -ddaq -c "GRANT CONNECT, TEMPORARY ON DATABASE daq TO webserver;"
@@ -450,6 +472,8 @@ psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.CheckUserExists(text, text) TO w
 psql -ddaq -c 'GRANT EXECUTE ON FUNCTION public.UsernameFromUserId(integer) TO webserver;'
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.UserIdFromUsername(text) TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireAllBaseConfigurations() TO webserver;"
+psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.ResolveAlarm() TO webserver;"
+psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.SilenceAlarm() TO webserver;"
 
 # add a database role for the middleman
 echo "adding middleman role"
