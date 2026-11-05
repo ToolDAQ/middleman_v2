@@ -501,9 +501,8 @@ psql -ddaq -c "ALTER ROLE middleman SET lock_timeout = 10000;"
 touch /.DBSetupDone
 
 # run scripts to pre-populate
-SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-echo "script dir: ${SCRIPTDIR}"
-cd ${SCRIPTDIR}
+echo "bas_source is: ${BASH_SOURCE[*]}"
+cd /opt/middleman
 echo ${PWD}
 find ./scripts -type f -name '*.sh' -exec sh -c "if [ ! -f {}.done ]; then {} && touch {}.done; fi" \;
 
