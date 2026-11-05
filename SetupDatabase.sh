@@ -506,5 +506,5 @@ SCRIPTDIRR=$( readlink -f "${SCRIPTDIR}" )
 echo "script dir is: ${SCRIPTDIRR}"
 cd /opt/middleman
 echo ${PWD}
-find ./scripts -type f -name '*.sh' -exec sh -c "if [ ! -f {}.done ]; then {} && touch {}.done; fi" \;
+find ./scripts -type f -name '*.sh' -exec sh -c "if [ ! -f {}.done ]; then chmod +x {} && {} && touch {}.done; fi" \;
 
