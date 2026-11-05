@@ -436,7 +436,7 @@ SELECT TRUE \
 
 echo "Create SilenceAlarm function"
 psql -ddaq -c " CREATE OR REPLACE FUNCTION public.SilenceAlarm( p_uid INTEGER, p_user TEXT ) RETURNS TABLE(uid INTEGER, status INTEGER, silence_user TEXT) LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$
-    UPDATE public.alarms AS a SET status = 1, silence_user_id = public.UseridFromUsername(p_user) WHERE a.uid = p_uid RETURNING a.uid, a.status, a.silence_user;
+    UPDATE public.alarms AS a SET status = 1, silence_user_id = public.UseridFromUsername(p_user) WHERE a.uid = p_uid RETURNING a.uid, a.status, a.silence_user_id;
 \$function$"
 
 echo "Create ResolveAlarm function"
