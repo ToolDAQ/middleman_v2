@@ -226,7 +226,7 @@ psql -ddaq -c "CREATE TABLE run_info (run_number integer GENERATED ALWAYS AS IDE
 
 echo "creating devices table"
 # more fields: created on, by? retirement cause?
-psql -ddaq -c "CREATE TABLE devices (device_id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name TEXT NOT NULL, description TEXT, author_id INTEGER NOT NULL references users(id), created_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), retired_time TIMESTAMP WITH TIME ZONE DEFAULT NULL, retired_user_id INTEGER references users(user_id) DEFAULT NULL, retired boolean NOT NULL DEFAULT FALSE);"
+psql -ddaq -c "CREATE TABLE devices (device_id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name TEXT NOT NULL, description TEXT, author_id INTEGER NOT NULL references users(user_id), created_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), retired_time TIMESTAMP WITH TIME ZONE DEFAULT NULL, retired_user_id INTEGER references users(user_id) DEFAULT NULL, retired boolean NOT NULL DEFAULT FALSE);"
 
 # functional index to ensure no duplicates even ignoring case
 echo "creating index on devices table"
