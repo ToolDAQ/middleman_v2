@@ -226,11 +226,12 @@ psql -ddaq -c "CREATE TABLE run_info (run_number integer GENERATED ALWAYS AS IDE
 
 echo "creating devices table"
 # more fields: created on, by? retirement cause?
-psql -ddaq -c "CREATE TABLE devices (device_id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name TEXT NOT NULL, description TEXT, author_id INTEGER NOT NULL references users(user_id), created_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), retired_time TIMESTAMP WITH TIME ZONE DEFAULT NULL, retired_user_id INTEGER references users(user_id) DEFAULT NULL, retired boolean NOT NULL DEFAULT FALSE);"
+psql -ddaq -c "CREATE TABLE devices (device_id integer GENERATED ALWAYS AS IDENTITY, name TEXT NOT NULL PRIMARY KEY, description TEXT, author_id INTEGER NOT NULL references users(user_id), created_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), retired_time TIMESTAMP WITH TIME ZONE DEFAULT NULL, retired_user_id INTEGER references users(user_id) DEFAULT NULL, retired boolean NOT NULL DEFAULT FALSE);"
 
 # functional index to ensure no duplicates even ignoring case
 echo "creating index on devices table"
 psql -ddaq -c "CREATE UNIQUE INDEX dev_name_idx ON devices(LOWER(name));"
+# do we need an index on dedvice_id?
 
 echo "creating device_config table"
 # XXX IMPORTANT: VERSION 0 OF ALL DEVICE CONFIGURATIONS SHOULD BE DEVICE OFF
