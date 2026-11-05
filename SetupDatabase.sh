@@ -181,6 +181,9 @@ psql -ddaq -c "GRANT TEMPORARY ON DATABASE daq to partman_maintainer;"
 psql -ddaq -c "GRANT ALL ON SCHEMA old_tables TO partman_maintainer;"
 psql -ddaq -c "GRANT CREATE ON DATABASE daq TO partman_maintainer;"    # required for partman to create schemas
 
+# FIXME temporary fix for bug remove when partman is updated
+psql -U postgres -d postgres -f /opt/pg_partman/fix_sub_partitioning.sql
+
 # we'll have partman detach older partitions and move them to a different schema
 psql -ddaq -c "CREATE SCHEMA old_tables;"
 # we'll need an external process to manage this data, doing downsampling and moving the data to HDD
