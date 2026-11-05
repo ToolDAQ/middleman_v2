@@ -170,7 +170,6 @@ fi
 # setup pg_partman
 psql -ddaq -c "CREATE SCHEMA partman;"
 psql -ddaq -c "CREATE EXTENSION pg_partman SCHEMA partman;"
-
 psql -ddaq -c "CREATE ROLE partman_maintainer WITH LOGIN;"
 psql -ddaq -c "GRANT ALL ON SCHEMA partman TO partman_maintainer;"
 psql -ddaq -c "grant root to partman_maintainer;" # root being the owner of our tables. for better security we could use a dedicated role instead
@@ -178,15 +177,15 @@ psql -ddaq -c "GRANT ALL ON ALL TABLES IN SCHEMA partman TO partman_maintainer;"
 psql -ddaq -c "GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA partman TO partman_maintainer;"
 psql -ddaq -c "GRANT EXECUTE ON ALL PROCEDURES IN SCHEMA partman TO partman_maintainer;"
 psql -ddaq -c "GRANT TEMPORARY ON DATABASE daq to partman_maintainer;"
-psql -ddaq -c "GRANT ALL ON SCHEMA old_tables TO partman_maintainer;"
-psql -ddaq -c "GRANT CREATE ON DATABASE daq TO partman_maintainer;"    # required for partman to create schemas
+#psql -ddaq -c "GRANT CREATE ON DATABASE daq TO partman_maintainer;"
+
+# we'll have partman detach older partitions and move them to a different schema
+# actually we need to do downsampling, so have to do this manually
+#psql -ddaq -c "CREATE SCHEMA old_tables;"
+#psql -ddaq -c "GRANT ALL ON SCHEMA old_tables TO partman_maintainer;"
 
 # FIXME temporary fix for bug remove when partman is updated
 psql -U postgres -d postgres -f /opt/pg_partman/fix_sub_partitioning.sql
-
-# we'll have partman detach older partitions and move them to a different schema
-psql -ddaq -c "CREATE SCHEMA old_tables;"
-# we'll need an external process to manage this data, doing downsampling and moving the data to HDD
 
 # TODO FIXME To optimize storage and minimize wasted space due to alignment padding,
 # it's advisable to arrange columns in the table definition from largest to smallest data type.
@@ -271,8 +270,8 @@ psql -ddaq -c "CREATE TABLE logging_template(LIKE logging);"
 echo "creating logging partition parent and child tables"
 psql -ddaq -c "SELECT partman.create_partition( p_parent_table:= 'public.logging', p_control := 'time', p_interval := '1 day', p_template_table:='public.logging_template');"
 
-echo "setting retention policy for logging table"
-psql -ddaq -c "UPDATE partman.part_config SET retention = '1 day', retention_schema = 'old_tables' WHERE parent_table = 'public.logging'";
+#echo "setting retention policy for logging table"
+#psql -ddaq -c "UPDATE partman.part_config SET retention = '1 day', retention_schema = 'old_tables' WHERE parent_table = 'public.logging'";
 
 echo "creating monitoring table"
 psql -ddaq -c "CREATE TABLE monitoring (time timestamp with time zone NOT NULL DEFAULT now(), device_id integer NOT NULL, subject text NOT NULL, data json NOT NULL) PARTITION BY RANGE (time);"
@@ -287,8 +286,8 @@ psql -ddaq -c "CREATE TABLE monitoring_template(LIKE monitoring);"
 echo "creating monitoring partition parent and child tables"
 psql -ddaq -c "SELECT partman.create_partition( p_parent_table:= 'public.monitoring', p_control := 'time', p_interval := '1 day', p_template_table:='public.monitoring_template');"
 
-echo "setting retention policy for monitoring table"
-psql -ddaq -c "UPDATE partman.part_config SET retention = '1 day', retention_schema = 'old_tables' WHERE parent_table = 'public.monitoring'";
+#echo "setting retention policy for monitoring table"
+#psql -ddaq -c "UPDATE partman.part_config SET retention = '1 day', retention_schema = 'old_tables' WHERE parent_table = 'public.monitoring'";
 
 # note on device name index usage: postgres never uses indexes for case insensitive searches!
 # we can create a functional index with 'lower(device)', but this only gets used if queries
