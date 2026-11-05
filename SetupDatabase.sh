@@ -185,6 +185,7 @@ psql -ddaq -c "GRANT TEMPORARY ON DATABASE daq to partman_maintainer;"
 #psql -ddaq -c "GRANT ALL ON SCHEMA old_tables TO partman_maintainer;"
 
 # FIXME temporary fix for bug remove when partman is updated
+cd /opt/pg_partman && git checkout subpart_fix && cd -
 psql -U postgres -d postgres -f /opt/pg_partman/fix_sub_partitioning.sql
 
 # TODO FIXME To optimize storage and minimize wasted space due to alignment padding,

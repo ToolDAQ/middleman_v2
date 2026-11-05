@@ -49,7 +49,6 @@ RUN cd /opt \
     && export PKG_CONFIG_PATH=/usr/pgsql-18/lib/pkgconfig && export PATH+=:/usr/pgsql-18/bin \
     && git clone https://github.com/ToolDAQ/pg_partman.git \
     && cd pg_partman \
-    && git checkout subpart_fix \
     && make install
 
 # FIXME checkout a tag
