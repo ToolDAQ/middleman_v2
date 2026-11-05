@@ -185,7 +185,7 @@ psql -ddaq -c "GRANT TEMPORARY ON DATABASE daq to partman_maintainer;"
 #psql -ddaq -c "GRANT ALL ON SCHEMA old_tables TO partman_maintainer;"
 
 # FIXME temporary fix for bug remove when partman is updated
-cd /opt/pg_partman && git checkout subpart_fix && cd -
+cd /opt/pg_partman && git checkout subpart_fix
 psql -ddaq -f /opt/pg_partman/fix_sub_partitioning.sql
 
 # TODO FIXME To optimize storage and minimize wasted space due to alignment padding,
@@ -500,5 +500,6 @@ psql -ddaq -c "ALTER ROLE middleman SET lock_timeout = 10000;"
 touch /.DBSetupDone
 
 # run scripts to pre-populate
+cd $( dirname "${BASH_SOURCE[0]}" )
 find ./scripts -type f -name '*.sh' -exec sh -c "if [ ! -f {}.done ]; then {} && touch {}.done; fi" \;
 
