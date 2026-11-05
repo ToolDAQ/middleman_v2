@@ -261,7 +261,7 @@ echo "creating logging table"
 psql -ddaq -c "CREATE TABLE logging (time timestamp with time zone NOT NULL DEFAULT now(), device_id integer NOT NULL, severity integer NOT NULL, message text NOT NULL, repeats integer NOT NULL DEFAULT 1) PARTITION BY RANGE (time);"
 
 echo "creating indices on logging device name and message severity"
-psql -ddaq -c "CREATE INDEX ON logging (device, time) ${FAST_TABLESPACE};"
+psql -ddaq -c "CREATE INDEX ON logging (device_id, time) ${FAST_TABLESPACE};"
 #psql -ddaq -c "CREATE INDEX ON logging (device, severity, time) ${FAST_TABLESPACE};" # maybe useful if people filter on severity often...
 #psql -ddaq -c "CREATE INDEX ON logging USING BRIN(time) ${FAST_TABLESPACE};"
 #'ALTER TABLE logging ALTER COLUMN device SET STATISTICS 1000;' Default is 100, maximum is 10000.
@@ -279,7 +279,7 @@ echo "creating monitoring table"
 psql -ddaq -c "CREATE TABLE monitoring (time timestamp with time zone NOT NULL DEFAULT now(), device_id integer NOT NULL, subject text NOT NULL, data json NOT NULL) PARTITION BY RANGE (time);"
 
 echo "creating indices on monitoring device name and subject"
-psql -ddaq -c "CREATE INDEX ON monitoring (device, time, subject) ${FAST_TABLESPACE};"
+psql -ddaq -c "CREATE INDEX ON monitoring (device_id, time, subject) ${FAST_TABLESPACE};"
 #psql -ddaq -c "CREATE INDEX ON monitoring USING BRIN(time) ${FAST_TABLESPACE};" # redundant with more useful B-Tree index on time
 
 echo "creating monitoring template table"
