@@ -476,8 +476,8 @@ psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.CheckUserExists(text, text) TO w
 psql -ddaq -c 'GRANT EXECUTE ON FUNCTION public.UsernameFromUserId(integer) TO webserver;'
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.UserIdFromUsername(text) TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireAllBaseConfigurations() TO webserver;"
-psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.ResolveAlarm() TO webserver;"
-psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.SilenceAlarm() TO webserver;"
+psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.ResolveAlarm(integer, text, text, text) TO webserver;"
+psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.SilenceAlarm(integer, text) TO webserver;"
 
 # add a database role for the middleman
 echo "adding middleman role"
