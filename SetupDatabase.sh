@@ -270,10 +270,10 @@ psql -ddaq -c "CREATE INDEX ON logging (device_id, time) ${FAST_TABLESPACE};"
 #'ALTER TABLE logging ALTER COLUMN device SET STATISTICS 1000;' Default is 100, maximum is 10000.
 
 echo "creating severity partitions on logging"
-psql -ddaq -c "CREATE TABLE logging_error PARTITION OF logging FOR VALUES IN (0)"
-psql -ddaq -c "CREATE TABLE logging_warning PARTITION OF logging FOR VALUES IN (1)"
-psql -ddaq -c "CREATE TABLE logging_message PARTITION OF logging FOR VALUES IN (2)"
-psql -ddaq -c "CREATE TABLE logging_debug PARTITION OF logging DEFAULT"
+psql -ddaq -c "CREATE TABLE logging_error PARTITION OF logging FOR VALUES IN (0) PARTITION BY RANGE(time)"
+psql -ddaq -c "CREATE TABLE logging_warning PARTITION OF logging FOR VALUES IN (1) PARTITION BY RANGE(time)"
+psql -ddaq -c "CREATE TABLE logging_message PARTITION OF logging FOR VALUES IN (2) PARTITION BY RANGE(time)"
+psql -ddaq -c "CREATE TABLE logging_debug PARTITION OF logging DEFAULT PARTITION BY RANGE(time)"
 
 echo "creating logging template table"
 psql -ddaq -c "CREATE TABLE logging_template(LIKE logging);"
