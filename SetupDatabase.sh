@@ -180,10 +180,9 @@ psql -ddaq -c "GRANT EXECUTE ON ALL PROCEDURES IN SCHEMA partman TO partman_main
 psql -ddaq -c "GRANT TEMPORARY ON DATABASE daq to partman_maintainer;"
 #psql -ddaq -c "GRANT CREATE ON DATABASE daq TO partman_maintainer;"
 
-# we'll have partman detach older partitions and move them to a different schema
-# actually we need to do downsampling, so have to do this manually
-#psql -ddaq -c "CREATE SCHEMA old_tables;"
-#psql -ddaq -c "GRANT ALL ON SCHEMA old_tables TO partman_maintainer;"
+# we'll have partman detach older logging partitions and move them to a different schema
+psql -ddaq -c "CREATE SCHEMA old_tables;"
+psql -ddaq -c "GRANT ALL ON SCHEMA old_tables TO partman_maintainer;"
 
 # FIXME temporary fix for bug remove when partman is updated
 cd /opt/pg_partman && git checkout subpart_fix
@@ -258,23 +257,39 @@ psql -ddaq -c 'CREATE OR REPLACE FUNCTION "fn_calibration_ver"() returns "pg_cat
 psql -ddaq -c 'CREATE TRIGGER trig_calibration_ver BEFORE insert ON calibration FOR EACH ROW EXECUTE PROCEDURE fn_calibration_ver();'
 
 echo "creating logging table"
-# we will not enforce logging device_ids referential integrity by choice: for performance, and because it's not important
-psql -ddaq -c "CREATE TABLE logging (time timestamp with time zone NOT NULL DEFAULT now(), device_id integer NOT NULL, severity integer NOT NULL, message text NOT NULL, repeats integer NOT NULL DEFAULT 1) PARTITION BY RANGE (time);"
+# we will not enforce logging device_ids referential integrity by choice: for performance, and because it's not important.
+# logging "downsampling" strategy is to drop lower severity logs; nothing else makes sense. We can automate this with pg_partman,
+# however we also partition by time (for read efficiency) and we can't set a pg_partman retention policy on sub-partitions.
+# so, make top-level partitions on severity manually, and then have pg_partman manage time-based sub-partitions of each.
+psql -ddaq -c "CREATE TABLE logging (time timestamp with time zone NOT NULL DEFAULT now(), device_id integer NOT NULL, severity integer NOT NULL, message bytea NOT NULL, repeats integer NOT NULL DEFAULT 1) PARTITION BY LIST (severity);"
 
-echo "creating indices on logging device name and message severity"
+echo "creating indices on logging"
 psql -ddaq -c "CREATE INDEX ON logging (device_id, time) ${FAST_TABLESPACE};"
 #psql -ddaq -c "CREATE INDEX ON logging (device, severity, time) ${FAST_TABLESPACE};" # maybe useful if people filter on severity often...
 #psql -ddaq -c "CREATE INDEX ON logging USING BRIN(time) ${FAST_TABLESPACE};"
 #'ALTER TABLE logging ALTER COLUMN device SET STATISTICS 1000;' Default is 100, maximum is 10000.
 
+echo "creating severity partitions on logging"
+psql -ddaq -c "CREATE TABLE logging_error PARTITION OF logging FOR VALUES IN (0)"
+psql -ddaq -c "CREATE TABLE logging_warning PARTITION OF logging FOR VALUES IN (1)"
+psql -ddaq -c "CREATE TABLE logging_message PARTITION OF logging FOR VALUES IN (2)"
+psql -ddaq -c "CREATE TABLE logging_debug PARTITION OF logging DEFAULT"
+
 echo "creating logging template table"
 psql -ddaq -c "CREATE TABLE logging_template(LIKE logging);"
 
 echo "creating logging partition parent and child tables"
-psql -ddaq -c "SELECT partman.create_partition( p_parent_table:= 'public.logging', p_control := 'time', p_interval := '1 day', p_template_table:='public.logging_template');"
+#psql -ddaq -c "SELECT partman.create_partition( p_parent_table:= 'public.logging', p_control := 'time', p_interval := '1 day', p_template_table:='public.logging_template');"
+psql -ddaq -c "SELECT partman.create_partition( p_parent_table:= 'public.logging_error', p_control := 'time', p_interval := '1 day', p_template_table:='public.logging_template');"
+psql -ddaq -c "SELECT partman.create_partition( p_parent_table:= 'public.logging_warning', p_control := 'time', p_interval := '1 day', p_template_table:='public.logging_template');"
+psql -ddaq -c "SELECT partman.create_partition( p_parent_table:= 'public.logging_message', p_control := 'time', p_interval := '1 day', p_template_table:='public.logging_template');"
+psql -ddaq -c "SELECT partman.create_partition( p_parent_table:= 'public.logging_debug', p_control := 'time', p_interval := '1 day', p_template_table:='public.logging_template');"
 
-#echo "setting retention policy for logging table"
-#psql -ddaq -c "UPDATE partman.part_config SET retention = '1 day', retention_schema = 'old_tables' WHERE parent_table = 'public.logging'";
+echo "setting retention policy for logging table"
+#psql -ddaq -c "UPDATE partman.part_config SET retention = '3 months', retention_schema = 'old_tables' WHERE parent_table = 'public.logging_error'";
+#psql -ddaq -c "UPDATE partman.part_config SET retention = '1 month', retention_schema = 'old_tables' WHERE parent_table = 'public.logging_warning'";
+psql -ddaq -c "UPDATE partman.part_config SET retention = '1 week', retention_schema = 'old_tables' WHERE parent_table = 'public.logging_message'";
+psql -ddaq -c "UPDATE partman.part_config SET retention = '1 day', retention_schema = 'old_tables' WHERE parent_table = 'public.logging_debug'";
 
 echo "creating monitoring table"
 psql -ddaq -c "CREATE TABLE monitoring (time timestamp with time zone NOT NULL DEFAULT now(), device_id integer NOT NULL, subject text NOT NULL, data json NOT NULL) PARTITION BY RANGE (time);"
@@ -287,7 +302,20 @@ echo "creating monitoring template table"
 psql -ddaq -c "CREATE TABLE monitoring_template(LIKE monitoring);"
 
 echo "creating monitoring partition parent and child tables"
-psql -ddaq -c "SELECT partman.create_partition( p_parent_table:= 'public.monitoring', p_control := 'time', p_interval := '1 day', p_template_table:='public.monitoring_template');"
+psql -ddaq -c "SELECT partman.create_partition( p_parent_table:= 'public.monitoring', p_control := 'time', p_interval := '1 day', p_template_table:='public.monitoring_template', p_premake:=2);"
+
+echo "sub-partitioning monitoring by device id"
+# hash partitioning isn't available with pg_partman, so we use list. not ideal - we need to ensure we have enough partitions
+# to cover all possible device IDs. They're sequentially allocated, so 250 partitions of 10 devices each will be 2,500 devices.
+# we don't want to over-estimate as this bloats the number of partitions, but we should cover all ids or data will end up
+# in the default partition (which is bad, i think)
+# we could also increase the devices-per-partition, though that trades off specificity of partition pruning
+psql -c "SELECT partman.create_sub_partition(p_top_parent := 'public.monitoring',
+                                             p_control := 'device_id',
+                                             p_interval := '10',
+                                             p_type := 'range',
+                                             p_declarative_check := 'yes',
+                                             p_premake := 250);"
 
 #echo "setting retention policy for monitoring table"
 #psql -ddaq -c "UPDATE partman.part_config SET retention = '1 day', retention_schema = 'old_tables' WHERE parent_table = 'public.monitoring'";
