@@ -310,7 +310,7 @@ echo "sub-partitioning monitoring by device id"
 # we don't want to over-estimate as this bloats the number of partitions, but we should cover all ids or data will end up
 # in the default partition (which is bad, i think)
 # we could also increase the devices-per-partition, though that trades off specificity of partition pruning
-psql -c "SELECT partman.create_sub_partition(p_top_parent := 'public.monitoring',
+psql -ddaq -c "SELECT partman.create_sub_partition(p_top_parent := 'public.monitoring',
                                              p_control := 'device_id',
                                              p_interval := '10',
                                              p_type := 'range',
