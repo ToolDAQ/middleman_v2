@@ -290,8 +290,8 @@ psql -ddaq -c "SELECT partman.create_partition( p_parent_table:= 'public.logging
 echo "setting retention policy for logging table"
 #psql -ddaq -c "UPDATE partman.part_config SET retention = '3 months', retention_schema = 'old_tables' WHERE parent_table = 'public.logging_error'";
 #psql -ddaq -c "UPDATE partman.part_config SET retention = '1 month', retention_schema = 'old_tables' WHERE parent_table = 'public.logging_warning'";
-psql -ddaq -c "UPDATE partman.part_config SET retention = '1 week', retention_schema = 'old_tables' WHERE parent_table = 'public.logging_message'";
-psql -ddaq -c "UPDATE partman.part_config SET retention = '1 day', retention_schema = 'old_tables' WHERE parent_table = 'public.logging_debug'";
+psql -ddaq -c "UPDATE partman.part_config SET retention = '3 months', retention_schema = 'old_tables' WHERE parent_table = 'public.logging_message'";
+psql -ddaq -c "UPDATE partman.part_config SET retention = '1 month', retention_schema = 'old_tables' WHERE parent_table = 'public.logging_debug'";
 
 echo "creating monitoring table"
 psql -ddaq -c "CREATE TABLE monitoring (time timestamp with time zone NOT NULL DEFAULT now(), device_id integer NOT NULL, subject text NOT NULL, data json NOT NULL) PARTITION BY RANGE (time);"
@@ -365,8 +365,7 @@ echo "creating global_alerts table"
 psql -ddaq -c "CREATE TABLE global_alerts ( time TIMESTAMP WITH TIME ZONE NOT NULL, name TEXT NOT NULL, payload bytea ) PARTITION BY RANGE (time);"
 
 echo "creating indices on global_alerts table"
-psql -ddaq -c "CREATE INDEX ON global_alerts (name) ${FAST_TABLESPACE};" # looking for specfic alerts
-psql -ddaq -c "CREATE INDEX ON global_alerts (time) ${FAST_TABLESPACE};" # looking for all alerts over a timespan
+psql -ddaq -c "CREATE INDEX ON global_alerts (name, time) ${FAST_TABLESPACE};"
 
 echo "creating global_alerts template table"
 psql -ddaq -c "CREATE TABLE global_alerts_template(LIKE global_alerts);"

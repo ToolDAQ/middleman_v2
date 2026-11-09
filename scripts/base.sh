@@ -5,6 +5,9 @@ psql -ddaq -c "INSERT INTO users (username, password_hash) VALUES ('dev_user', '
 echo "inserting a dummy device"
 psql -ddaq -c "INSERT INTO devices ( name, description, author_id ) VALUES ( 'demo_device', 'test device', 1 );"
 
+echo "inserting middleman device"
+psql -ddaq -c "INSERT INTO devices ( name, description, author_id ) VALUES ( 'middleman', 'interface application to online database', 1 );"
+
 echo "Inserting example monitoring data"
 psql -ddaq -c "INSERT INTO monitoring (time, device_id, subject, data) SELECT now() - (i * INTERVAL '1 minute') AS time, 1 as device_id, 'general' AS subject, json_build_object( 'temperature', round((random() * 50 + 10)::numeric, 2), 'humidity', round((random() * 100)::numeric, 2)) AS data FROM generate_series(1, 100) i;"
 
