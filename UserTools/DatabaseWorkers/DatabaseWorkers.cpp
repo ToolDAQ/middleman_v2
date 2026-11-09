@@ -476,11 +476,11 @@ bool DatabaseWorkers::DatabaseJob(void*& arg){
 			// calibration insert
 			conn->prepare("calibration_insert", "INSERT INTO calibration ( time, name, description, data ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, name text, description text, data json) returning version");
 			// device config insert
-			conn->prepare("device_config_insert", "INSERT INTO device_config ( time, device, author, description, data ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, device text, author integer, description text, data json) returning version");
+			conn->prepare("device_config_insert", "INSERT INTO device_config ( time, device, author_id, description, data ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, device text, author_id integer, description text, data json) returning version");
 			// run config insert
-			conn->prepare("base_config_insert", "INSERT INTO base_config ( time, name, author, description, data ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, name text, author integer, description text, data json) returning config_id");
+			conn->prepare("base_config_insert", "INSERT INTO base_config ( time, name, author_id, description, data ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, name text, author_id integer, description text, data json) returning config_id");
 			// run mode config insert
-			conn->prepare("runmode_config_insert", "INSERT INTO runmode_config ( time, name, author, description, data ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, name text, author integer, description text, data json) returning config_id");
+			conn->prepare("runmode_config_insert", "INSERT INTO runmode_config ( time, name, author_id, description, data ) SELECT * FROM json_to_recordset( $1::json ) as t(time timestamptz, name text, author_id integer, description text, data json) returning config_id");
 		}
 	}
 	

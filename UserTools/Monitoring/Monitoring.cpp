@@ -106,7 +106,7 @@ void Monitoring::Thread(Thread_args* args){
 	
 	for(std::pair<const std::string, MonitoringVariables*>& mon : m_args->m_data->monitoring_variables){
 		
-		std::string s="{\"topic\":\"Monitoring\", \"time\":\"now()\", \"device\":\"middleman\",\"subject\":\""+mon.first+"\", \"data\":"+mon.second->GetJSON()+"}";
+		std::string s="{\"topic\":\"Monitoring\", \"time\":\"now()\", \"device_id\":"+std::to_string(m_args->m_data->services->GetDeviceId())+",\"subject\":\""+mon.first+"\", \"data\":"+mon.second->GetJSON()+"}";
 		//printf("Monitoring sending for tool '%s': %s'\n",mon.first.c_str(), s.c_str());
 		
 		// use multicast so it also not only goes to DB but also shows up on web services

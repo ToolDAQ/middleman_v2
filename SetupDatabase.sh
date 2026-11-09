@@ -46,8 +46,10 @@ if [ -f /.DBSetupDone ]; then
 	fi
 	
 	# run scripts to pre-populate
+	echo "running any new pre-population scripts"
 	cd $( dirname "${BASH_SOURCE[0]}" )
-	find ./scripts -type f -name '*.sh' -exec sh -c "if [ ! -f {}.done ]; then {} && touch {}.done; fi" \;
+	ls -l
+	find ./scripts -type f -name '*.sh' -exec sh -c "if [ ! -f {}.done ]; then chmod +x {} && {} && touch {}.done; fi" \;
 	
 	exit 0;
 fi
@@ -261,7 +263,7 @@ echo "creating logging table"
 # logging "downsampling" strategy is to drop lower severity logs; nothing else makes sense. We can automate this with pg_partman,
 # however we also partition by time (for read efficiency) and we can't set a pg_partman retention policy on sub-partitions.
 # so, make top-level partitions on severity manually, and then have pg_partman manage time-based sub-partitions of each.
-psql -ddaq -c "CREATE TABLE logging (time timestamp with time zone NOT NULL DEFAULT now(), device_id integer NOT NULL, severity integer NOT NULL, message bytea NOT NULL, repeats integer NOT NULL DEFAULT 1) PARTITION BY LIST (severity);"
+psql -ddaq -c "CREATE TABLE logging (time timestamp with time zone NOT NULL DEFAULT now(), device_id integer NOT NULL, severity integer NOT NULL, message text NOT NULL, repeats integer NOT NULL DEFAULT 1) PARTITION BY LIST (severity);"
 
 echo "creating indices on logging"
 psql -ddaq -c "CREATE INDEX ON logging (device_id, time) ${FAST_TABLESPACE};"
