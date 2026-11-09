@@ -11,6 +11,9 @@ bool Monitoring::Initialise(std::string configfile, DataModel &data){
 	logger = m_data->logger;
 	//m_variables.Print();
 	
+	time_t rawtime = time(nullptr);
+	LOG(logger,LOG_ERR,"Middleman starting at %s",ctime(&rawtime));
+	
 	if(!m_variables.Get("verbose",m_verbose)) m_verbose=1;
 	
 	// how often to write out monitoring stats
@@ -82,6 +85,10 @@ bool Monitoring::Finalise(){
 	m_data->num_threads--;
 	
 	LOG(logger,LOG_NOTICE,"%s Finished",m_tool_name.c_str());
+	
+	time_t rawtime = time(nullptr);
+	LOG(logger,LOG_ERR,"Middleman stopping at %s",ctime(&rawtime));
+	
 	return true;
 }
 
@@ -99,7 +106,7 @@ void Monitoring::Thread(Thread_args* args){
 	
 	for(std::pair<const std::string, MonitoringVariables*>& mon : m_args->m_data->monitoring_variables){
 		
-		std::string s="{\"topic\":\"Monitoring\", \"time\":\"now()\", \"device\":\"middleman\",\"subject\":\""+mon.first+"\", \"data\":"+mon.second->GetJSON()+"}";
+		std::string s="{\"topic\":\"Monitoring\", \"time\":\"now()\", \"device_id\":"+std::to_string(m_args->m_data->services->GetDeviceId())+",\"subject\":\""+mon.first+"\", \"data\":"+mon.second->GetJSON()+"}";
 		//printf("Monitoring sending for tool '%s': %s'\n",mon.first.c_str(), s.c_str());
 		
 		// use multicast so it also not only goes to DB but also shows up on web services

@@ -22,8 +22,7 @@ if (tool=="ReadWorkers") ret=new ReadWorkers;
 if (tool=="TestAlerts") ret=new TestAlerts;
 if (tool=="StopQuitFile") ret=new StopQuitFile;
 if (tool=="GracefulStop") ret=new GracefulStop;
-
-
-  if (tool=="SetVerbosity") ret=new SetVerbosity;
+if (tool=="SetVerbosity") ret=new SetVerbosity;
+if (tool=="CrashCheck") ret=new CrashCheck;
 return ret;
 }
