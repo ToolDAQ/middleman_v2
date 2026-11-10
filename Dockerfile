@@ -21,6 +21,7 @@ RUN cd /opt \
 
 # FIXME remove pg 18 specialisation
 RUN cd /opt/middleman \
+    && git pull \
     && chmod a+x SetupDatabase.sh \
     && export PATH+=:/usr/pgsql-18/bin && export PGROOT=/var/lib/pgsql/18 \
     && echo 'export PATH+=:/usr/pgsql-18/bin' >> /opt/middleman/Setup.sh \

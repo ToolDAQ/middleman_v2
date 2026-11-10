@@ -49,7 +49,8 @@ fi
 while [ true ]; do
 	echo -n "starting middleman at " >> middleman_runs.log
 	date >> middleman_runs.log
-	./main ./configfiles/middleman/ToolChainConfig
+	DATETIME=$(date +%s)
+	./main ./configfiles/middleman/ToolChainConfig 2> >(tee middleman_errors_${DATETIME}.log)
 	echo -n "middleman exited with code $? at " >> middleman_runs.log
 	date >> middleman_runs.log
 	sleep 1

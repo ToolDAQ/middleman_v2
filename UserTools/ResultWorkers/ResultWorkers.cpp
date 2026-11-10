@@ -326,6 +326,8 @@ bool ResultWorkers::ResultJob(void*& arg){
 										// but to convert this into JSON, strings need to be quoted:
 										// i.e. { "field1":3, "field2":"cat", "field3":{"iam":"ajson"} }
 										// this means we need to add enclosing quotes *only* for string fields
+										// 18 = char, 25 = text, 1043 = varchar, 1042 = bpchar
+										// these are oids from psql -c "select * from pg_type" or somewhere
 										if((it->type()==18) || (it->type()==25) || (it->type()==1042) || (it->type()==1043)){
 											m_args->tmpval += "\""+std::string{it->c_str()}+"\"";
 										} else {
