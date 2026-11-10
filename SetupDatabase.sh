@@ -363,6 +363,12 @@ psql -ddaq -c "CREATE OR REPLACE FUNCTION public.UserIdFromUsername(p_username T
 echo "Create UsernameFromUserId function"
 psql -ddaq -c "CREATE OR REPLACE FUNCTION public.UsernameFromUserId(p_user_id INTEGER ) RETURNS TEXT LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public' AS \$function$ SELECT username FROM public.users WHERE user_id = p_user_id;\$function$"
 
+echo "Create DeviceidFromDevicename function"
+psql -ddaq -c "CREATE OR REPLACE FUNCTION public.DeviceidFromDevicename(p_device_name TEXT) RETURNS INTEGER LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public' AS \$function$ SELECT device_id FROM public.devices WHERE name = p_device_name;\$function$"
+
+echo "Create DevicenameFromDeviceId function"
+psql -ddaq -c "CREATE OR REPLACE FUNCTION public.DevicenameFromDeviceId(p_device_id INTEGER ) RETURNS TEXT LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public' AS \$function$ SELECT name FROM public.devices WHERE device_id = p_device_id;\$function$"
+
 echo "Create RetireAllBaseConfigurations function"
 psql -ddaq -c "CREATE OR REPLACE FUNCTION public.RetireAllBaseConfigurations() RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$ UPDATE base_config SET retired = TRUE; SELECT TRUE \$function$"
 
@@ -384,7 +390,7 @@ SELECT TRUE \
 
 echo "Create SilenceAlarm function"
 psql -ddaq -c " CREATE OR REPLACE FUNCTION public.SilenceAlarm( p_uid INTEGER, p_user TEXT ) RETURNS TABLE(uid INTEGER, status INTEGER, silence_user TEXT) LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$
-    UPDATE public.alarms AS a SET status = 1, silence_user_id = public.UseridFromUsername(p_user) WHERE a.uid = p_uid RETURNING a.uid, a.status, a.silence_user;
+    UPDATE public.alarms AS a SET status = 1, silence_user_id = public.UseridFromUsername(p_user) WHERE a.uid = p_uid RETURNING a.uid, a.status, public.UserNameFromUserId(a.silence_user_id) AS silence_user;
 \$function$"
 
 echo "Create ResolveAlarm function"
@@ -424,9 +430,12 @@ psql -ddaq -c "GRANT EXECUTE ON FUNCTION ValidateUser(text, text) TO webserver";
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.CheckUserExists(text, text) TO webserver";
 psql -ddaq -c 'GRANT EXECUTE ON FUNCTION public.UsernameFromUserId(integer) TO webserver;'
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.UserIdFromUsername(text) TO webserver;"
+psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.DeviceIdFromDevicename(text) TO webserver;"
+psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.DevicenameFromDeviceId(integer) TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireAllBaseConfigurations() TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.ResolveAlarm() TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.SilenceAlarm() TO webserver;"
+
 # DEFAULT DATA
 ###############
 # Insert a default user for testing
