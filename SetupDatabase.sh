@@ -514,9 +514,6 @@ psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.UserIdFromUsername(text) TO webs
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.DeviceIdFromDevicename(text) TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.DevicenameFromDeviceId(integer) TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireAllBaseConfigurations() TO webserver;"
-psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.ResolveAlarm() TO webserver;"
-psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.SilenceAlarm() TO webserver;"
-
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.ResolveAlarm(integer, text, text, text) TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.SilenceAlarm(integer, text) TO webserver;"
 
