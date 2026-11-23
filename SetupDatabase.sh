@@ -532,7 +532,6 @@ psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireAllBaseConfigurations(text
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireDevice(text, text) TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireDeviceConfigurationCascading(text, integer, text) TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireManyDeviceConfigurationsCascading(text, integer, text) TO webserver;"
-psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireManyDeviceConfigurationsCascading(text, integer, text) TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireRunModeConfiguration(text, integer, text) TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireBaseConfiguration(text, integer, text) TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.ResolveAlarm(integer, text, text, text) TO webserver;"
