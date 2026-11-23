@@ -452,21 +452,36 @@ echo "Create DevicenameFromDeviceId function"
 psql -ddaq -c "CREATE OR REPLACE FUNCTION public.DevicenameFromDeviceId(p_device_id INTEGER ) RETURNS TEXT LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public' AS \$function$ SELECT name FROM public.devices WHERE device_id = p_device_id;\$function$"
 
 echo "Create RetireAllBaseConfigurations function"
-psql -ddaq -c "CREATE OR REPLACE FUNCTION public.RetireAllBaseConfigurations() RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$ UPDATE base_config SET retired = TRUE; SELECT TRUE \$function$"
+psql -ddaq -c "CREATE OR REPLACE FUNCTION public.RetireAllBaseConfigurations(p_user_name TEXT) RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$ UPDATE base_config SET retired = TRUE, retired_time = NOW(), retired_user_id = public.UserIdFromUserName(p_user_name); SELECT TRUE \$function$"
+
+echo "Create RetireDevice function"
+psql -ddaq -c " CREATE OR REPLACE FUNCTION public.RetireDevice( _device_name TEXT, _user_name TEXT ) RETURNS TEXT LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$ UPDATE devices SET retired_time = NOW(), retired_user_id = public.UserIdFromUsername(_user_name), retired = TRUE WHERE name = _device_name RETURNING name; \$function$"
+
+
+echo "Create RetireBaseConfiguration function"
+psql -ddaq -c "CREATE OR REPLACE FUNCTION public.RetireBaseConfiguration(p_config_name TEXT, p_version INTEGER, p_user_name TEXT) RETURNS TEXT LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$ \
+UPDATE base_config SET retired = TRUE, retired_time = NOW(), retired_user_id = public.UserIdFromUserName(p_user_name) WHERE name = p_config_name AND version = p_version AND retired = FALSE RETURNING name; \
+\$function$"
+		
+echo "Create RetireRunModeConfiguration function"
+psql -ddaq -c "CREATE OR REPLACE FUNCTION public.RetireRunModeConfiguration(p_config_name TEXT, p_version INTEGER, p_user_name TEXT) RETURNS TEXT LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$ \
+UPDATE runmode_config SET retired = TRUE, retired_time = NOW(), retired_user_id = public.UserIdFromUserName(p_user_name) WHERE name = p_config_name AND version = p_version AND retired = FALSE RETURNING name; \
+\$function$"
+		
 
 echo "Create RetireDeviceConfigurationCascading function"
-psql -ddaq -c "CREATE OR REPLACE FUNCTION public.RetireDeviceConfigurationCascading(p_device_name TEXT, p_version_num INTEGER) RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$ \
-UPDATE base_config SET retired = TRUE WHERE data ? p_device_name AND (data->p_device_name)::integer=p_version_num; \
-UPDATE runmode_config SET retired = TRUE WHERE data ? p_device_name AND (data->p_device_name)::integer=p_version_num; \
-UPDATE device_config SET retired = TRUE WHERE device=p_device_name AND version=p_version_num; \
+psql -ddaq -c "CREATE OR REPLACE FUNCTION public.RetireDeviceConfigurationCascading(p_device_name TEXT, p_version_num INTEGER, p_user_name TEXT) RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$ \
+UPDATE base_config SET retired = TRUE, retired_time = NOW(), retired_user_id = public.UserIdFromUserName(p_user_name) WHERE data ? p_device_name AND (data->p_device_name)::integer=p_version_num; \
+UPDATE runmode_config SET retired = TRUE, retired_time = NOW(), retired_user_id = public.UserIdFromUserName(p_user_name) WHERE data ? p_device_name AND (data->p_device_name)::integer=p_version_num; \
+UPDATE device_config SET retired = TRUE, retired_time = NOW(), retired_user_id = public.UserIdFromUserName(p_user_name) WHERE device=p_device_name AND version=p_version_num; \
 SELECT TRUE \
 \$function$"
 
 echo "Create RetireManyDeviceConfigurationsCascading function"
-psql -ddaq -c "CREATE OR REPLACE FUNCTION public.RetireManyDeviceConfigurationsCascading(p_device_name TEXT, p_version_num INTEGER) RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$ \
-UPDATE base_config SET retired = TRUE WHERE data ? p_device_name AND (data->p_device_name)::integer<p_version_num; \
-UPDATE runmode_config SET retired = TRUE WHERE data ? p_device_name AND (data->p_device_name)::integer<p_version_num; \
-UPDATE device_config SET retired = TRUE WHERE device=p_device_name AND version<p_version_num; \
+psql -ddaq -c "CREATE OR REPLACE FUNCTION public.RetireManyDeviceConfigurationsCascading(p_device_name TEXT, p_version_num INTEGER, p_user_name TEXT) RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$ \
+UPDATE base_config SET retired = TRUE, retired_time = NOW(), retired_user_id = public.UserIdFromUserName(p_user_name) WHERE data ? p_device_name AND (data->p_device_name)::integer<p_version_num; \
+UPDATE runmode_config SET retired = TRUE, retired_time = NOW(), retired_user_id = public.UserIdFromUserName(p_user_name) WHERE data ? p_device_name AND (data->p_device_name)::integer<p_version_num; \
+UPDATE device_config SET retired = TRUE, retired_time = NOW(), retired_user_id = public.UserIdFromUserName(p_user_name) WHERE device=p_device_name AND version<p_version_num; \
 SELECT TRUE \
 \$function$"
 
@@ -513,9 +528,16 @@ psql -ddaq -c 'GRANT EXECUTE ON FUNCTION public.UsernameFromUserId(integer) TO w
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.UserIdFromUsername(text) TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.DeviceIdFromDevicename(text) TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.DevicenameFromDeviceId(integer) TO webserver;"
-psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireAllBaseConfigurations() TO webserver;"
+psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireAllBaseConfigurations(text) TO webserver;"
+psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireDevice(text, text) TO webserver;"
+psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireDeviceConfigurationCascading(text, integer, text) TO webserver;"
+psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireManyDeviceConfigurationsCascading(text, integer, text) TO webserver;"
+psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireManyDeviceConfigurationsCascading(text, integer, text) TO webserver;"
+psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireRunModeConfiguration(text, integer, text) TO webserver;"
+psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.RetireBaseConfiguration(text, integer, text) TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.ResolveAlarm(integer, text, text, text) TO webserver;"
 psql -ddaq -c "GRANT EXECUTE ON FUNCTION public.SilenceAlarm(integer, text) TO webserver;"
+
 
 # add a database role for the middleman
 echo "adding middleman role"
