@@ -455,7 +455,7 @@ echo "Create RetireAllBaseConfigurations function"
 psql -ddaq -c "CREATE OR REPLACE FUNCTION public.RetireAllBaseConfigurations(p_user_name TEXT) RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$ UPDATE base_config SET retired = TRUE, retired_time = NOW(), retired_user_id = public.UserIdFromUserName(p_user_name); SELECT TRUE \$function$"
 
 echo "Create RetireDevice function"
-psql -ddaq -c " CREATE OR REPLACE FUNCTION public.RetireDevice( _device_name TEXT, _user_name TEXT ) RETURNS TEXT LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$ UPDATE devices SET retired_time = NOW(), retired_user_id = public.UserIdFromUsername(_user_name), retired = TRUE WHERE name = _device_name RETURNING name; \$function$"
+psql -ddaq -c " CREATE OR REPLACE FUNCTION public.RetireDevice( _device_name TEXT, _user_name TEXT ) RETURNS TEXT LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS \$function$ UPDATE devices SET retired_time = NOW(), retired_user_id = public.UserIdFromUsername(_user_name), retired = TRUE WHERE name = _device_name AND retired = FALSE RETURNING name; \$function$"
 
 
 echo "Create RetireBaseConfiguration function"
